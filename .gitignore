@@ -1,0 +1,14 @@
+idea
+/var/
+venv
+__pycache__
+.*/
+*.pyc
+*.ipynb
+.env
+/media/
+/static/
+/beat/
+/log/
+/db/
+celerybeat-schedule

@@ -1,0 +1,61 @@
+version: "3.8"
+services:
+  db:
+    image: postgis/postgis:latest
+    container_name: django_simple_db
+    env_file: ./.env
+    volumes:
+      - django_simple_db:/var/lib/postgresql/data
+    ports:
+      - 5434:5432
+
+  redis:
+    image: redis
+    container_name: django_simple_redis
+
+  app:
+    container_name: django_simple
+    restart: always
+    env_file: ./.env
+    volumes:
+      - ./src:/app
+      - ./staticfiles:/staticfiles
+      - ./static:/static/:rw
+      - ./log:/log/:rw
+      - ./media:/media/:rw
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
+    ports:
+      - 8003:8000
+    command: bash -c "
+        python3 manage.py check &&
+        python3 manage.py makemigrations && 
+        python3 manage.py migrate --noinput && 
+        python3 manage.py collectstatic --noinput && 
+        python3 manage.py runserver 0.0.0.0:8000
+      "
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    container_name: django_simple_celery
+    restart: always
+    env_file: ./.env
+    volumes:
+      - ./src:/app
+      - ./beat:/beat/:rw
+      - ./log:/log/:rw
+      - ./media:/media/:rw
+    build:
+      context: .
+      dockerfile: ./docker/app/Dockerfile
+    command: bash -c "celery -A app worker -l info -c 2 --beat -E -s ../beat/celerybeat-schedule"
+    depends_on:
+      - db
+      - redis
+      - app
+
+volumes:
+  django_simple_db:
